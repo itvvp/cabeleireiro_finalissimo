@@ -1,10 +1,13 @@
 <?php
     session_start();
 
-	include "bd/conexao.php";
-	//include "sessao.php"; 
+    include "bd/conexao.php";
+    //include "sessao.php"; 
     date_default_timezone_set('Europe/Lisbon');
     error_reporting(E_ALL & ~E_NOTICE);
+
+    // marca esta página como cabeleireira 1
+    $_SESSION['terapeuta'] = 1;
 ?>
 <!DOCTYPE html>
 <html class="loading" lang="en" data-textdirection="ltr">
@@ -184,6 +187,7 @@
                                                             <textarea name="notasbloqueio" disabled class="form-control textarea-maxlength" id="notasbloqueio"  maxlength="250" rows="5"></textarea>
                                                             <!-- errors will go here -->
                                                         </div> 
+                                                         <?php include __DIR__ . '/components/modal_dados_marcacao_actions.php'; ?>
                                                        
                                                     </div>
 
