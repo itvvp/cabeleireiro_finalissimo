@@ -22,16 +22,11 @@
                         ?>
                         <li class="nav-item" ><a class="dropdown-toggle nav-link" href="indesp.php" ><i class="la la-calendar-times-o"></i><span data-i18n="Gerir Horário<">Gerir Horário</span></a></li>
                         <li class="nav-item" ><a class="dropdown-toggle nav-link" href="gerir_tratamentos.php" ><i class="la la-wrench"></i><span data-i18n="Gerir Tratamentos<<">Gerir Tratamentos</span></a></li>
+                        <li class="nav-item" ><a class="dropdown-toggle nav-link" href="configuracao_horarios.php" ><i class="la la-calendar"></i><span data-i18n="Configuracao Horarios<<<">Configurar Horários</span></a></li>
                 <?php
                     }
                 }
-                ?>   
-                    
-                
-
-               
-                
-                 
+                ?>    
             </ul>
         </div>
     </div>
