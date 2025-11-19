@@ -281,17 +281,37 @@ error_reporting(E_ALL & ~E_NOTICE);
             resp.data.forEach(function (folga) {
               var diasNomes = (folga.dias || []).map(function (dia) { return diasSemana[(dia||1) - 1]; });
               html += '<tr><td>' + folga.nome + '</td><td>' + diasNomes.join(', ') + '</td>';
-              html += '<td><button class="btn btn-sm btn-secondary btn-edit-folga" data-id="'+folga.id+'">Editar</button></td></tr>';
+              html += '<td>';
+              html += '<button class="btn btn-sm btn-secondary btn-edit-folga" data-id="'+folga.id+'">Editar</button>';
+              html += ' <button class="btn btn-sm btn-danger btn-delete-folga ml-1" data-id="'+folga.id+'">Apagar</button>';
+              html += '</td></tr>';
             });
             html += '</tbody></table>';
             $('#folgasTableContainer').html(html);
           }).fail(function(){ $('#folgasTableContainer').html('<div class="alert alert-danger">Erro ao obter folgas.</div>'); });
         }
-
-        // Delegated click handler for dynamically created Edit buttons
-        $(document).on('click', '.btn-edit-folga', function(){
+        
+        // Delegated handler para apagar folga
+        $(document).on('click', '.btn-delete-folga', function(){
           var id = $(this).data('id');
-          loadFolgaForEdit(id);
+          if (!confirm('Tem a certeza que pretende apagar esta folga?')) return;
+          var $btn = $(this).prop('disabled', true);
+          $.ajax({
+            url: 'api/delete_folga.php',
+            method: 'POST',
+            data: { id: id },
+            dataType: 'json'
+          }).done(function(resp){
+            if (resp.success) {
+              $('#folgaFeedback').html('<div class="alert alert-success">Folga apagada com sucesso.</div>');
+              if (typeof calendar !== 'undefined' && calendar.refetchEvents) calendar.refetchEvents();
+              loadFolgas();
+            } else {
+              $('#folgaFeedback').html('<div class="alert alert-danger">Erro: ' + (resp.error || JSON.stringify(resp.errors)) + '</div>');
+            }
+          }).fail(function(){
+            $('#folgaFeedback').html('<div class="alert alert-danger">Erro de comunicação ao apagar.</div>');
+          }).always(function(){ $btn.prop('disabled', false); });
         });
 
         // Carregar folga para edição no modal

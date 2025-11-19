@@ -46,7 +46,8 @@ if (!empty($error)) {
 
 // Verificar se os dias selecionados já estão associados a folgas para a mesma cabeleireira
 $dias_str = implode(',', array_map('intval', $dias));
-$sql_check = "SELECT COUNT(*) as count FROM folgas WHERE cabeleireira = ? AND dia_semana IN ($dias_str)";
+// Fixed: Use correct column name 'terapeutas_id' (matches table schema)
+$sql_check = "SELECT COUNT(*) as count FROM folgas WHERE terapeutas_id = ? AND dias_folga IN ($dias_str)";
 $stmt_check = sqlsrv_prepare($conn, $sql_check, [$terapeuta_id]);
 if (!$stmt_check || !sqlsrv_execute($stmt_check)) {
     echo json_encode(['success' => false, 'errors' => sqlsrv_errors()]);
@@ -58,14 +59,14 @@ if ($row['count'] > 0) {
     exit;
 }
 
-// Gerar um novo ID para a folga (assumindo que id_folga é auto-incremento ou gerado)
-// Se id_folga não for auto-incremento, ajuste conforme necessário
-$sql_max = "SELECT MAX(id_folga) as max_id FROM folgas";
-$stmt_max = sqlsrv_query($conn, $sql_max);
-$row_max = sqlsrv_fetch_array($stmt_max, SQLSRV_FETCH_ASSOC);
-$new_id = ($row_max['max_id'] ?? 0) + 1;
+// Removed: Unnecessary ID generation if 'id' is auto-increment
 
+// Define the insert SQL (was missing) - use correct column name
+$insert_sql = "INSERT INTO folgas (terapeutas_id, dias_folga) VALUES (?, ?)";
 // Insert new folga entries
+$success_count = 0;
+$failed = [];
+$failed_errors = [];
 foreach ($dias as $dia) {
     $dia = trim($dia);
     if ($dia === '') { continue; }
@@ -107,55 +108,3 @@ if ($success_count > 0) {
 echo json_encode($data);
 exit;
 ?>
-
-<!-- language: html -->
-<form id="folgaForm">
-  <label for="terapeuta">Terapeuta</label>
-  <select id="terapeuta" name="terapeuta_id" required>
-    <!-- preencher com options do servidor -->
-    <option value="1">Terapeuta 1</option>
-    <option value="2">Terapeuta 2</option>
-  </select>
-
-  <fieldset>
-    <legend>Selecione dias de folga</legend>
-    <label><input type="checkbox" name="dias_folga[]" value="1"> Segunda (1)</label>
-    <label><input type="checkbox" name="dias_folga[]" value="2"> Terça (2)</label>
-    <label><input type="checkbox" name="dias_folga[]" value="3"> Quarta (3)</label>
-    <label><input type="checkbox" name="dias_folga[]" value="4"> Quinta (4)</label>
-    <label><input type="checkbox" name="dias_folga[]" value="5"> Sexta (5)</label>
-    <label><input type="checkbox" name="dias_folga[]" value="6"> Sábado (6)</label>
-    <label><input type="checkbox" name="dias_folga[]" value="7"> Domingo (7)</label>
-  </fieldset>
-
-  <button type="submit">Gravar folgas</button>
-</form>
-
-<div id="msg"></div>
-
-<script>
-document.getElementById('folgaForm').addEventListener('submit', function(e){
-  e.preventDefault();
-  var form = e.target;
-  var formData = new FormData(form);
-
-  // enviar como array (dias_folga[]) — create_folga.php aceita array ou string
-  fetch('api/create_folga.php', {
-    method: 'POST',
-    body: formData,
-    credentials: 'same-origin'
-  }).then(function(res){ return res.json(); })
-    .then(function(json){
-      var msg = document.getElementById('msg');
-      if (json.success) {
-        msg.textContent = 'Folgas gravadas: ' + (json.inserted || 0);
-        if (json.warning) { msg.textContent += ' — ' + json.warning; }
-      } else {
-        msg.textContent = 'Erro: ' + (json.errors ? JSON.stringify(json.errors) : (json.error||'desconhecido'));
-      }
-    }).catch(function(err){
-      document.getElementById('msg').textContent = 'Erro de rede';
-      console.error(err);
-    });
-});
-</script>
