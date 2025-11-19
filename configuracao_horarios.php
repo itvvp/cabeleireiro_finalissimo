@@ -140,7 +140,7 @@ error_reporting(E_ALL & ~E_NOTICE);
 
                        <div class="text-right">
                          <button type="submit" class="btn btn-primary" id="gravar_folga">Gravar Folga / Bloqueio</button>
-                         <button type="button" class="btn btn-secondary d-none" id="editar_folga">Editar Folga</button>
+                         <!-- <button type="button" class="btn btn-secondary d-none" id="editar_folga">Editar Folga</button> -->
                        </div>
                      </form>
 
@@ -282,7 +282,6 @@ error_reporting(E_ALL & ~E_NOTICE);
               var diasNomes = (folga.dias || []).map(function (dia) { return diasSemana[(dia||1) - 1]; });
               html += '<tr><td>' + folga.nome + '</td><td>' + diasNomes.join(', ') + '</td>';
               html += '<td>';
-              html += '<button class="btn btn-sm btn-secondary btn-edit-folga" data-id="'+folga.id+'">Editar</button>';
               html += ' <button class="btn btn-sm btn-danger btn-delete-folga ml-1" data-id="'+folga.id+'">Apagar</button>';
               html += '</td></tr>';
             });
@@ -531,4 +530,3 @@ error_reporting(E_ALL & ~E_NOTICE);
 </body>
 </html>
 <?php
-// simples wrapper para manter compatibilidade com pedidos que usem "create_horarios.php"

@@ -77,7 +77,6 @@ foreach ($dias as $dia) {
     }
 
     $dia_int = intval($dia);
-    // normalização: o form usa 0 para Domingo -> converte para 7 se necessário
     if ($dia_int === 0) $dia_int = 7;
 
     $params = [ intval($terapeuta_id), $dia_int ];
@@ -92,6 +91,25 @@ foreach ($dias as $dia) {
 }
 
 if ($success_count > 0) {
+    // Call create_events_folgas.php to generate events for 2027
+    $ch = curl_init();
+    curl_setopt($ch, CURLOPT_URL, 'http://' . $_SERVER['HTTP_HOST'] . dirname($_SERVER['REQUEST_URI']) . '/create_events_folgas.php');
+    curl_setopt($ch, CURLOPT_POST, true);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query([
+        'terapeuta_id' => $terapeuta_id,
+        'dias' => $dias
+    ]));
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    $response = curl_exec($ch);
+    curl_close($ch);
+
+    $event_result = json_decode($response, true);
+    if ($event_result && $event_result['success']) {
+        $data['events_inserted'] = $event_result['inserted'];
+    } else {
+        $data['warning'] = 'Folgas criadas, mas eventos não foram gerados.';
+    }
+
     $data['success'] = true;
     $data['inserted'] = $success_count;
     if (!empty($failed)) {
