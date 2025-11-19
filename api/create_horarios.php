@@ -42,8 +42,11 @@ try {
 
         if ($weekday === null) continue; // ignora entradas inválidas
 
-        // Inserir na tabela
-        $params = [$weekday, $is_enable, $start_time, $end_time];
+        // CONVERSÃO: API (1=Domingo,2=Segunda,...) -> BD (1=Segunda,...,7=Domingo)
+        $db_weekday = (($weekday + 5) % 7) + 1;
+
+        // Inserir na tabela (usar $db_weekday)
+        $params = [$db_weekday, $is_enable, $start_time, $end_time];
         $res = sqlsrv_query($conn, $insertSql, $params);
         if ($res === false) throw new Exception('Erro ao inserir horario: ' . print_r(sqlsrv_errors(), true));
 
