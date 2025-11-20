@@ -3,6 +3,8 @@ session_start();
 include("../bd/conexao.php");
 header('Content-Type: application/json');
 
+include_once __DIR__ . '/../timerSetter.php';
+
 $data = [];
 $error = [];
 
@@ -91,13 +93,19 @@ foreach ($dias as $dia) {
 }
 
 if ($success_count > 0) {
-    // Call create_events_folgas.php to generate events for 2027
+    // obter ano / emulação do timerSetter
+    $time_emulator = ts_get_time_emulator();
+    $ano = $_REQUEST['ano'] ?? ts_get_generation_year(1);
+
+    // Call create_events_folgas.php to generate events (pass ano ou time_emulator)
     $ch = curl_init();
     curl_setopt($ch, CURLOPT_URL, 'http://' . $_SERVER['HTTP_HOST'] . dirname($_SERVER['REQUEST_URI']) . '/create_events_folgas.php');
     curl_setopt($ch, CURLOPT_POST, true);
     curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query([
-        'terapeuta_id' => $terapeuta_id,
-        'dias' => $dias
+        'terapeuta_id'   => $terapeuta_id,
+        'dias'           => $dias,
+        'ano'            => $ano,              // passar ano calculado
+        'time_emulator'  => $time_emulator     // opcional: passa a string de emulação
     ]));
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
     $response = curl_exec($ch);

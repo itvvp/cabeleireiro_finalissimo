@@ -2,6 +2,8 @@
 include("../bd/conexao.php");
 header('Content-Type: application/json; charset=utf-8');
 
+include_once __DIR__ . '/../timerSetter.php'; // <-- ADICIONADO
+
 try {
     // Espera um POST com 'days' => array de { weekday, is_enable, start_time, end_time }
     $days = $_POST['days'] ?? null;
@@ -67,7 +69,15 @@ try {
         $ch = curl_init();
         curl_setopt($ch, CURLOPT_URL, $urlCreateBlocks);
         curl_setopt($ch, CURLOPT_POST, true);
-        curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query(['year' => 2027])); // apenas testes em 2027
+
+        // calcular ano / passar emulação do timerSetter em vez de 2027 hard-coded
+        $year = isset($_POST['year']) ? intval($_POST['year']) : ts_get_generation_year(1);
+        $time_emulator = ts_get_time_emulator();
+
+        curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query([
+            'year' => $year,
+            'time_emulator' => $time_emulator
+        ]));
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 5);
         curl_setopt($ch, CURLOPT_TIMEOUT, 120); // aumentar timeout para operação pesada

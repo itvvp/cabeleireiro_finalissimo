@@ -2,8 +2,18 @@
 include("../bd/conexao.php");
 header('Content-Type: application/json');
 
-// Apenas para testes em 2027
-$ano = 2027;
+include_once __DIR__ . '/../timerSetter.php'; // <--- novo include
+
+// obter valores a partir do timerSetter
+$time_emulator = ts_get_time_emulator();
+$emulatedNow = ts_get_emulated_now();
+$forceYearOnly = ts_force_year_only_from_emulator($time_emulator);
+$deleteStartExpr = ts_get_delete_start_expr();
+
+// manter compatibilidade: $ano usado posteriormente para limite de geração
+$ano = isset($_REQUEST['ano']) ? intval($_REQUEST['ano']) : (int)$emulatedNow->format('Y') + 1;
+$anoInicio = $ano;
+$anoFim = $ano + 2;
 
 // Buscar cabeleireiras
 $cabeleireiras = [];
@@ -43,16 +53,44 @@ $inserted = 0;
 $errors = [];
 
 try {
-    // Apaga eventos de bloqueio gerados anteriormente para 2027 (apenas eventos deste script)
-    $delSql = "DELETE FROM events WHERE id_tratamento = 9999 AND title = 'Horário não disponível' AND start_event >= '2027-01-01 00:00:00' AND start_event < '2028-01-01 00:00:00'";
-    $delRes = sqlsrv_query($conn, $delSql);
+    // determinar início da deleção / "now" emulado
+    if ($time_emulator === '') {
+        $deleteStartExpr = 'GETDATE()';
+        $emulatedNow = new DateTimeImmutable('now');
+        $forceYearOnly = false;
+    } elseif (preg_match('/^\d{4}$/', $time_emulator)) {
+        $deleteStartExpr = "'{$time_emulator}-01-01 00:00:00'";
+        $emulatedNow = new DateTimeImmutable("{$time_emulator}-01-01");
+        $forceYearOnly = true;
+    } else {
+        // emulador é uma data/hora específica -> usar como now
+        $deleteStartExpr = "'{$time_emulator}'";
+        $emulatedNow = new DateTimeImmutable($time_emulator);
+        $forceYearOnly = false;
+    }
+
+    // Limite superior para deleção: se $ano >= 2029 usar $ano-01-01 00:00:00, senão até 2028
+    $endBoundary = ($ano >= 2029) ? "$ano-01-01 00:00:00" : "2028-01-01 00:00:00";
+
+    // Apaga eventos gerados anteriormente a partir do "now" (ou emulação) até o limite
+    $delSql = "DELETE FROM events WHERE id_tratamento = 9999 AND title = 'Horário não disponível' AND start_event >= $deleteStartExpr AND start_event < ?";
+    $delRes = sqlsrv_query($conn, $delSql, [$endBoundary]);
     if ($delRes === false) {
         throw new Exception('Falha ao apagar eventos anteriores: ' . print_r(sqlsrv_errors(), true));
     }
 
     // Usar DateTimeImmutable para iterar por dias (evita problemas com DST/86400)
-    $startDate = new DateTimeImmutable("$ano-01-01");
-    $endDate = new DateTimeImmutable("$ano-12-31");
+    if ($forceYearOnly) {
+        // iniciar e terminar apenas no ano emulado
+        $startDate = new DateTimeImmutable($emulatedNow->format('Y-01-01'));
+        $endDate = new DateTimeImmutable($emulatedNow->format('Y-12-31'));
+    } else {
+        // iniciar a partir do "now" emulado ou $ano-01-01 (o que for maior)
+        $anoStart = new DateTimeImmutable("$ano-01-01");
+        $startDate = ($emulatedNow > $anoStart) ? $emulatedNow : $anoStart;
+        $endDate = new DateTimeImmutable("$anoFim-12-31");
+    }
+
     for ($dt = $startDate; $dt <= $endDate; $dt = $dt->modify('+1 day')) {
         $dia = $dt->format('Y-m-d');
 
