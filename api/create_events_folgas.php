@@ -9,7 +9,7 @@ $dias = isset($_POST['dias']) ? $_POST['dias'] : [];
 
 $emulatedNow = ts_get_emulated_now();
 // permitir override via POST 'ano', senão gerar para o ano baseado no timerSetter (por defeito next year)
-$ano = isset($_POST['ano']) ? intval($_POST['ano']) : ts_get_generation_year(1);
+$ano = isset($_POST['ano']) ? intval($_POST['ano']) : ts_get_generation_year(0);
 
 // Map API weekday (1=Domingo,2=Segunda,...) -> PHP date('w') (0=Domingo,1=Segunda,...)
 $weekday_map = [

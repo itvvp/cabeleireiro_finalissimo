@@ -1,6 +1,7 @@
 <?php
 session_start();
 include __DIR__ . '/../bd/conexao.php';
+include_once __DIR__ . '/../timerSetter.php';
 header('Content-Type: application/json');
 
 $id = isset($_POST['id']) ? intval($_POST['id']) : 0;
@@ -38,15 +39,24 @@ if ($rows === false) {
     exit;
 }
 
-// Delete events for 2027 folgas
+// Delete events for folgas (pass ano ou time_emulator to target same year as event creation)
 if (!empty($dias)) {
+    $time_emulator = ts_get_time_emulator();
+    $postFields = [
+        'terapeuta_id' => $id,
+        'dias' => $dias
+    ];
+    if ($time_emulator === '') {
+        // if no emulator, send generation year (same default used when creating events)
+        $postFields['ano'] = $_REQUEST['ano'] ?? ts_get_generation_year(0);
+    } else {
+        $postFields['time_emulator'] = $time_emulator;
+    }
+
     $ch = curl_init();
     curl_setopt($ch, CURLOPT_URL, 'http://' . $_SERVER['HTTP_HOST'] . dirname($_SERVER['REQUEST_URI']) . '/delete_events_folgas.php');
     curl_setopt($ch, CURLOPT_POST, true);
-    curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query([
-        'terapeuta_id' => $id,
-        'dias' => $dias
-    ]));
+    curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($postFields));
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
     $response = curl_exec($ch);
     curl_close($ch);

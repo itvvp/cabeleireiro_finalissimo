@@ -3,11 +3,42 @@
 // Mecanismos de configuração: $_REQUEST['time_emulator'], $_SESSION['time_emulator'], env TIME_EMULATOR
 session_start();
 
+date_default_timezone_set("Europe/Lisbon");
+
+$now = new DateTime();
+$now->format('Y-m-d H:i:s');
+
+
+function getDateNow(): DateTimeImmutable {
+    return ts_get_emulated_now();
+}
+
 function ts_get_time_emulator(): string {
-    if (!empty($_REQUEST['time_emulator'])) return trim($_REQUEST['time_emulator']);
-    if (!empty($_SESSION['time_emulator'])) return trim($_SESSION['time_emulator']);
-    $env = getenv('TIME_EMULATOR');
-    return $env !== false ? trim($env) : '';
+    // retorna '' quando não houver emulador
+    $raw = '';
+    if (!empty($_REQUEST['time_emulator'])) $raw = trim($_REQUEST['time_emulator']);
+    elseif (!empty($_SESSION['time_emulator'])) $raw = trim($_SESSION['time_emulator']);
+    else {
+        $env = getenv('TIME_EMULATOR');
+        $raw = $env !== false ? trim($env) : '';
+    }
+
+    if ($raw === '') return '';
+
+    // se for só ano, mantém como "YYYY"
+    if (preg_match('/^\d{4}$/', $raw)) {
+        return $raw;
+    }
+
+    // tenta normalizar/formatar a data completa
+    try {
+        $dt = new DateTimeImmutable($raw);
+        // usa 12h com am/pm conforme pediste; para SQL recomendo 'Y-m-d H:i:s' (24h)
+        return $dt->format('Y-m-d h:i:sa');
+    } catch (Exception $e) {
+        // fallback para a string original se não for parseável
+        return $raw;
+    }
 }
 
 function ts_force_year_only_from_emulator(string $em): bool {
