@@ -31,7 +31,7 @@ try {
     $basePath = rtrim(dirname($_SERVER['REQUEST_URI']), '/\\');
     $urlCreateBlocks = 'http://' . $hostBase . $basePath . '/create_horarios_funcionamento.php';
 
-    $shouldTriggerBlocks = false; // <--- novo: marcar para disparar depois do commit
+    $shouldTriggerBlocks = false; 
 
     foreach ($days as $entry) {
         // aceitar chaves alternativas

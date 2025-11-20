@@ -10,8 +10,16 @@ if ($terapeuta_id <= 0 || empty($dias)) {
     exit;
 }
 
-// Map weekdays: 1=Monday (PHP 1), ..., 7=Sunday (PHP 0)
-$weekday_map = [1 => 1, 2 => 2, 3 => 3, 4 => 4, 5 => 5, 6 => 6, 7 => 0];
+// Map API weekday (1=Domingo,2=Segunda,...) -> PHP date('w') (0=Domingo,1=Segunda,...)
+$weekday_map = [
+    1 => 0, // Domingo -> date('w') == 0
+    2 => 1, // Segunda -> 1
+    3 => 2,
+    4 => 3,
+    5 => 4,
+    6 => 5,
+    7 => 6  // Sábado -> 6
+];
 
 $inserted = 0;
 foreach ($dias as $dia) {

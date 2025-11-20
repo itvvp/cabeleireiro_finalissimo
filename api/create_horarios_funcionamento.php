@@ -38,12 +38,6 @@ while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
     ];
 }
 
-// Função para obter weekday (1=Segunda, ..., 7=Domingo)
-function getDbWeekday($timestamp) {
-    $php_w = date('w', $timestamp); 
-    return $php_w == 0 ? 7 : $php_w;
-}
-
 sqlsrv_begin_transaction($conn);
 $inserted = 0;
 $errors = [];
@@ -56,11 +50,14 @@ try {
         throw new Exception('Falha ao apagar eventos anteriores: ' . print_r(sqlsrv_errors(), true));
     }
 
-    $start = strtotime("$ano-01-01");
-    $end = strtotime("$ano-12-31");
-    for ($data = $start; $data <= $end; $data += 86400) {
-        $dia = date('Y-m-d', $data);
-        $weekday = getDbWeekday($data);
+    // Usar DateTimeImmutable para iterar por dias (evita problemas com DST/86400)
+    $startDate = new DateTimeImmutable("$ano-01-01");
+    $endDate = new DateTimeImmutable("$ano-12-31");
+    for ($dt = $startDate; $dt <= $endDate; $dt = $dt->modify('+1 day')) {
+        $dia = $dt->format('Y-m-d');
+
+        $phpN = (int)$dt->format('N');
+        $weekday = ($phpN % 7); 
 
         $h = isset($horarios[$weekday]) ? $horarios[$weekday] : null;
         $bloqueios = [];
