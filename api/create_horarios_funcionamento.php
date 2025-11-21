@@ -2,20 +2,21 @@
 include("../bd/conexao.php");
 header('Content-Type: application/json');
 
-include_once __DIR__ . '/../timerSetter.php'; // <--- novo include
+include_once __DIR__ . '/../timerSetter.php';
 
 // obter valores a partir do timerSetter
 $time_emulator = ts_get_time_emulator();
 $emulatedNow = ts_get_emulated_now();
 $forceYearOnly = ts_force_year_only_from_emulator($time_emulator);
 $deleteStartExpr = ts_get_delete_start_expr();
+$nowDate = getDateNow();
 
 // manter compatibilidade: $ano usado posteriormente para limite de geração
-$ano = isset($_REQUEST['ano']) ? intval($_REQUEST['ano']) : (int)$emulatedNow->format('Y') + 1;
+$ano = isset($_REQUEST['ano']) ? intval($_REQUEST['ano']) : (int)$emulatedNow->format('Y') ;
 $anoInicio = $ano;
 $anoFim = $ano + 2;
 
-// Buscar cabeleireiras
+// Get cabeleireiras
 $cabeleireiras = [];
 $sql = "SELECT id FROM terapeutas";
 $stmt = sqlsrv_query($conn, $sql);
@@ -31,7 +32,7 @@ if (empty($cabeleireiras)) {
     exit;
 }
 
-// Buscar horários de funcionamento
+// Get horários de funcionamento
 $horarios = [];
 $sql = "SELECT weekday, is_enable, CONVERT(VARCHAR(5), start_time, 108) AS start_time, CONVERT(VARCHAR(5), end_time, 108) AS end_time FROM horarios_funcionamento";
 $stmt = sqlsrv_query($conn, $sql);
@@ -40,7 +41,6 @@ if ($stmt === false) {
     exit;
 }
 while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
-    // weekday: 1=Segunda, ..., 7=Domingo
     $horarios[$row['weekday']] = [
         'is_enable' => (int)$row['is_enable'],
         'start' => $row['start_time'],
@@ -53,7 +53,6 @@ $inserted = 0;
 $errors = [];
 
 try {
-    // determinar início da deleção / "now" emulado
     if ($time_emulator === '') {
         $deleteStartExpr = 'GETDATE()';
         $emulatedNow = new DateTimeImmutable('now');
@@ -63,17 +62,16 @@ try {
         $emulatedNow = new DateTimeImmutable("{$time_emulator}-01-01");
         $forceYearOnly = true;
     } else {
-        // emulador é uma data/hora específica -> usar como now
         $deleteStartExpr = "'{$time_emulator}'";
         $emulatedNow = new DateTimeImmutable($time_emulator);
         $forceYearOnly = false;
     }
 
-    // Limite superior para deleção: se $ano >= 2029 usar $ano-01-01 00:00:00, senão até 2028
+    // Limite superior para del: se $ano >= 2029 usar $ano-01-01 00:00:00, senão até 2028
     $endBoundary = ($ano >= 2029) ? "$ano-01-01 00:00:00" : "2028-01-01 00:00:00";
 
     // Apaga eventos gerados anteriormente a partir do "now" (ou emulação) até o limite
-    $delSql = "DELETE FROM events WHERE id_tratamento = 9999 AND title = 'Horário não disponível' AND start_event >= $deleteStartExpr AND start_event < ?";
+    $delSql = "DELETE FROM events WHERE id_tratamento = 9999 AND title = 'Serviço não disponível' AND start_event >= $deleteStartExpr AND start_event < ?";
     $delRes = sqlsrv_query($conn, $delSql, [$endBoundary]);
     if ($delRes === false) {
         throw new Exception('Falha ao apagar eventos anteriores: ' . print_r(sqlsrv_errors(), true));
@@ -81,11 +79,9 @@ try {
 
     // Usar DateTimeImmutable para iterar por dias (evita problemas com DST/86400)
     if ($forceYearOnly) {
-        // iniciar e terminar apenas no ano emulado
         $startDate = new DateTimeImmutable($emulatedNow->format('Y-01-01'));
         $endDate = new DateTimeImmutable($emulatedNow->format('Y-12-31'));
     } else {
-        // iniciar a partir do "now" emulado ou $ano-01-01 (o que for maior)
         $anoStart = new DateTimeImmutable("$ano-01-01");
         $startDate = ($emulatedNow > $anoStart) ? $emulatedNow : $anoStart;
         $endDate = new DateTimeImmutable("$anoFim-12-31");
@@ -117,7 +113,7 @@ try {
             foreach ($cabeleireiras as $cab) {
                 $sql = "INSERT INTO events (title, start_event, end_event, color, text_color, id_tratamento, cabeleireira) VALUES (?, ?, ?, ?, ?, ?, ?)";
                 $params = [
-                    'Horário não disponível',
+                    'Serviço não disponível',
                     $dia . ' ' . $b['start'],
                     $dia . ' ' . $b['end'],
                     '#33333373',

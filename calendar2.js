@@ -124,8 +124,8 @@ today = yyyy + '-' + mm + '-' + dd;
             dataType    : 'json',
             encode      : true
         }).done(function(data) {
-           // console.log(data);
-          //  console.log("Sucesso:" + data.success);
+            //console.log(data);
+            // console.log("Sucesso:" + data.success);
             // insert worked
             if (data.success) {
                 $('#erro_inserir').hide();

@@ -276,7 +276,7 @@ if (isset($_REQUEST['NomeHospede'])) {
             
             //  echo $data_hora_i_c."<br>";
 
-                $d2 = "+ $duracao_h hours"; // Tempo esperado para finalizar o atendimento
+                $d2 = "+ $duracao_h hours"; 
                 $d3 = "+ $duracao_m minutes"; 
 
             //   echo $d2."<br>";

@@ -26,23 +26,22 @@ include("../bd/conexao.php");
         {
             $title = "Horário não disponível";
 
-        // $data_hora_i=date('Y-m-d', strtotime($start))." ".date('H:i:s', strtotime($startTime));
-
             $data_hora_i_c=$startdate_inserir." ".$starttime_inserir;
             $data_hora_f=$startdate_inserir." ".$endtime_inserir;
 
-        
-            
-            $sql="select count(*) as total from events where (('$data_hora_i_c'>=start_event and '$data_hora_i_c'<=end_event) or 
-            ('$data_hora_f'>=start_event and '$data_hora_f'<=end_event)) and id_tratamento!=9999 and cabeleireira='$cabeleireira'";
-          //  echo "linha 38: ".$sql."<br>";
-            $stmt = sqlsrv_query($conn, $sql);
+            // Parameterized overlap check and pass params to sqlsrv_query
+            $sql = "SELECT COUNT(*) AS total
+                    FROM events
+                    WHERE NOT (end_event <= ? OR start_event >= ?)
+                      AND id_tratamento != 9999
+                      AND cabeleireira = ?";
+            $params = array($data_hora_i_c, $data_hora_f, $cabeleireira);
+            $stmt = sqlsrv_query($conn, $sql, $params);
             if ($stmt === false) {
                 die(print_r(sqlsrv_errors(), true));
             }
             $row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC);
             $numero_registos=$row["total"];
-//echo "linha 64: ".$numero_registos."<br>";
         
             if ($numero_registos>0) {
                 $error['totalRegistos'] = 'O horário que definiu para o tratamento já se encontra ocupado';
@@ -52,7 +51,6 @@ include("../bd/conexao.php");
             else{
                 
                 $sql="insert into events(title,start_event,end_event,color,text_color,id_tratamento,notas,cabeleireira) values('$title','$data_hora_i_c','$data_hora_f','$cor','#ffffff',9999,'$NotasHospede','$cabeleireira')";
-                //echo $sql."<br>";
                 $stmt = sqlsrv_query($conn, $sql);
                 if ($stmt === false) {
                     die(print_r(sqlsrv_errors(), true));
@@ -69,27 +67,24 @@ include("../bd/conexao.php");
             $enddate_inserir=date('Y/m/d',strtotime($enddate_inserir));
             while($startdate_inserir<=$enddate_inserir)
             {
-               // echo $startdate_inserir." & ".$enddate_inserir."<br>";
                 $title = "Horário não disponível";
-
-                // $data_hora_i=date('Y-m-d', strtotime($start))." ".date('H:i:s', strtotime($startTime));
-
                 $data_hora_i_c=$startdate_inserir." ".$starttime_inserir;
                 $data_hora_f=$startdate_inserir." ".$endtime_inserir;
 
-            
-                
-                $sql="select count(*) as total from events where ('$data_hora_i_c'>=start_event and '$data_hora_i_c'<=end_event) or 
-                ('$data_hora_f'>=start_event and '$data_hora_f'<=end_event) and id_tratamento!=9999 and cabeleireira='$cabeleireira'";
-               // echo $sql."<br>";
-                $stmt = sqlsrv_query($conn, $sql);
+                // Use same parameterized overlap check inside the loop
+                $sql = "SELECT COUNT(*) AS total
+                        FROM events
+                        WHERE NOT (end_event <= ? OR start_event >= ?)
+                          AND id_tratamento != 9999
+                          AND cabeleireira = ?";
+                $params = array($data_hora_i_c, $data_hora_f, $cabeleireira);
+                $stmt = sqlsrv_query($conn, $sql, $params);
                 if ($stmt === false) {
                     die(print_r(sqlsrv_errors(), true));
                 }
                 $row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC);
                 $numero_registos=$row["total"];
 
-            
                 if ($numero_registos>0) {
                     $error['totalRegistos'] = 'O horário que definiu para o tratamento já se encontra ocupado';
                     $data['success'] = false;
@@ -98,7 +93,6 @@ include("../bd/conexao.php");
                 else{
                     
                     $sql="insert into events(title,start_event,end_event,color,text_color,id_tratamento,notas,cabeleireira) values('$title','$data_hora_i_c','$data_hora_f','$cor','#ffffff',9999,'$NotasHospede','$cabeleireira')";
-                    //echo $sql."<br>";
                     $stmt = sqlsrv_query($conn, $sql);
                     if ($stmt === false) {
                         die(print_r(sqlsrv_errors(), true));
