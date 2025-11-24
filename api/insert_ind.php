@@ -111,7 +111,7 @@ include("../bd/conexao.php");
                 $error['totalRegistos'] = 'Existem eventos marcados no intervalo fornecido';
                 $data['success'] = false;
                 $data['errors'] = $error;
-                $data['overlaps'] = $all_overlaps; // lista para o modal
+                $data['overlaps'] = $all_overlaps;
             } else {
                 // Sem sobreposições: inserir cada dia do intervalo
                 $current = $startdate_inserir;
