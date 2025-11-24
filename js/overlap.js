@@ -36,14 +36,18 @@ $(function(){
 
   function showOverlaps(overlaps) {
     if (!Array.isArray(overlaps) || overlaps.length === 0) return;
-    var html = '<div class="table-responsive"><table class="table table-sm table-striped"><thead><tr><th>Título</th><th>Cliente</th><th>Quarto</th><th>Início</th><th>Fim</th><th>Notas</th></tr></thead><tbody>';
+    var html = '<div class="table-responsive"><table class="table table-sm table-striped"><thead><tr>' +
+               '<th>Serviço</th><th>Cliente</th><th>Quarto</th><th>Início</th><th>Fim</th><th>Notas</th>' +
+               '</tr></thead><tbody>';
     overlaps.forEach(function(o){
-      html += '<tr><td>' + escapeHtml(o.title) + '</td>';
+      html += '<tr>';
+      html += '<td>' + escapeHtml(o.title || '') + '</td>';
       html += '<td>' + escapeHtml(o.nome_hospede || o.cliente || '') + '</td>';
       html += '<td>' + escapeHtml(o.quarto || '') + '</td>';
-      html += '<td>' + escapeHtml(o.start_event || o.start) + '</td>';
-      html += '<td>' + escapeHtml(o.end_event || o.end) + '</td>';
-      html += '<td>' + escapeHtml(o.notas) + '</td></tr>';
+      html += '<td>' + escapeHtml(o.start_event || o.start || '') + '</td>';
+      html += '<td>' + escapeHtml(o.end_event || o.end || '') + '</td>';
+      html += '<td>' + escapeHtml(o.notas || '') + '</td>';
+      html += '</tr>';
     });
     html += '</tbody></table></div>';
     $('#overlapsModalBody').html(html);
