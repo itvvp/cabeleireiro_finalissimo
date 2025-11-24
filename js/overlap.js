@@ -15,12 +15,12 @@ $(function(){
       console.log('api/insert_ind response', resp);
 
       if (!resp.success) {
-        $('#erro_inserir').show();
+        $('#overlapsModal').show();
         if (resp.overlaps && Array.isArray(resp.overlaps) && resp.overlaps.length > 0) {
           showOverlaps(resp.overlaps);
         }
       } else {
-        $('#erro_inserir').hide();
+        $('#overlapsModal').hide();
         $form[0].reset();
         $('#addeventmodal').modal('hide');
         if (typeof calendar !== 'undefined' && typeof calendar.refetchEvents === 'function') {
@@ -50,8 +50,43 @@ $(function(){
       html += '</tr>';
     });
     html += '</tbody></table></div>';
-    $('#overlapsModalBody').html(html);
-    $('#overlapsModal').modal('show');
+
+    // garantir que o modal existe e está no body
+    var $modal = $('#overlapsModal');
+    if ($modal.length === 0) {
+      console.warn('overlapsModal não encontrado no DOM — injetando modal mínimo.');
+      var modalHtml = '<div class="modal fade" id="overlapsModal" tabindex="-1" role="dialog" aria-labelledby="overlapsModalLabel" aria-hidden="true">' +
+                      '<div class="modal-dialog modal modal-dialog-centered" role="document">' 
+                        '<div class="modal-content bg-dark text-white">' 
+                          '<div class="modal-header">' 
+                            '<h5 class="modal-title" id="overlapsModalLabel">Marcações ativas que colidem</h5>' 
+                            '<button type="button" class="close" data-dismiss="modal" aria-label="Fechar"><span aria-hidden="true">&times;</span></button>' +
+                          '</div>' 
+                          '<div class="modal-body" id="overlapsModalBody"></div>' +
+                          '<div class="modal-footer"><button type="button" class="btn btn-secondary" data-dismiss="modal">Fechar</button></div>' +
+                        '</div>' 
+                      '</div>' 
+                    '</div>';
+      $('body').append(modalHtml);
+      $modal = $('#overlapsModal');
+    }
+
+    $modal.find('#overlapsModalBody').html(html);
+
+    // garantir que o modal não está embebido dentro de outro modal e que o plugin bootstrap está disponível
+    try {
+      if (typeof $modal.modal === 'function') {
+        $modal.appendTo('body');
+        $modal.modal('show');
+      } else {
+        // fallback visual simples
+        $modal.show();
+        alert('Foram encontrados conflitos. Verifique o modal de conflitos na interface.');
+      }
+    } catch (err) {
+      console.error('Erro ao mostrar overlaps modal:', err);
+      alert('Erro ao mostrar modal de conflitos. Ver console.');
+    }
   }
 
   function escapeHtml(str) {

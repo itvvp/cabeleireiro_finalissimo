@@ -1,5 +1,5 @@
 <div class="modal fade" id="overlapsModal" tabindex="-1" role="dialog" aria-labelledby="overlapsModalLabel" aria-hidden="true">
-<div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+<div class="modal-dialog modal-xl modal-dialog-centered" role="document">
     <div class="modal-content">
     <div class="modal-header">
         <h5 class="modal-title" id="overlapsModalLabel">Marcações ativas que colidem</h5>

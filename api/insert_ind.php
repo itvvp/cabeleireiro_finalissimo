@@ -1,7 +1,7 @@
 <?php
 header('Content-Type: application/json; charset=utf-8');
 session_start();
-include __DIR__ . '/../bd/conexao.php'; // adapte se necessário
+include __DIR__ . '/../bd/conexao.php';
 
 // Ler POST
 $cabeleireira = isset($_POST['cabeleireira']) ? $_POST['cabeleireira'] : null;
@@ -17,19 +17,18 @@ if (!$cabeleireira || !$startdate || !$starttime || !$endtime) {
     exit;
 }
 
-// construir datetimes no formato usado na BD (ajuste se necessário)
+// construir datetimes
 $start_dt = date('Y-m-d H:i:s', strtotime($startdate . ' ' . $starttime));
 $end_dt   = date('Y-m-d H:i:s', strtotime($enddate . ' ' . $endtime));
 
 // Verificar overlaps
-// Condição de overlap: evento.start < novo_end AND evento.end > novo_start
-// Filtrar por terapeuta igual e (id_tratamento = 9999 OR title <> 'Serviço não disponivel')
+// inclui apenas eventos que não são bloqueios (id_tratamento = 9999 && title = 'Serviço não disponivel')
 $sql = "
-    SELECT id, title, nome_hospede, quarto, start_event, end_event, notas, id_tratamento
-    FROM eventos
-    WHERE id_terapeuta = ?
+    SELECT id, title, nome_hospede, quarto, start_event, end_event, notas, id_tratamento, cabeleireira
+    FROM events
+    WHERE cabeleireira = ?
       AND (start_event < ? AND end_event > ?)
-      AND (id_tratamento = 9999 OR ISNULL(title,'') <> 'Serviço não disponivel')
+      AND (id_tratamento <> 9999 OR ISNULL(title,'') <> 'Serviço não disponivel')
     ORDER BY start_event
 ";
 $params = [$cabeleireira, $end_dt, $start_dt];
@@ -42,22 +41,16 @@ if ($stmt === false) {
 
 $overlaps = [];
 while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
-    // formatar datas com segurança (DateTime ou string)
+    // formatar campos de data com segurança
     $start_event = '';
     $end_event = '';
     if (isset($row['start_event'])) {
-        if ($row['start_event'] instanceof DateTime) {
-            $start_event = $row['start_event']->format('Y-m-d H:i');
-        } else {
-            $start_event = (string)$row['start_event'];
-        }
+        if ($row['start_event'] instanceof DateTime) $start_event = $row['start_event']->format('Y-m-d H:i:s');
+        else $start_event = (string)$row['start_event'];
     }
     if (isset($row['end_event'])) {
-        if ($row['end_event'] instanceof DateTime) {
-            $end_event = $row['end_event']->format('Y-m-d H:i');
-        } else {
-            $end_event = (string)$row['end_event'];
-        }
+        if ($row['end_event'] instanceof DateTime) $end_event = $row['end_event']->format('Y-m-d H:i:s');
+        else $end_event = (string)$row['end_event'];
     }
 
     $overlaps[] = [
@@ -68,7 +61,8 @@ while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
         'start_event' => $start_event,
         'end_event' => $end_event,
         'notas' => $row['notas'],
-        'id_tratamento' => $row['id_tratamento']
+        'id_tratamento' => $row['id_tratamento'],
+        'cabeleireira' => $row['cabeleireira']
     ];
 }
 
@@ -78,14 +72,14 @@ if (count($overlaps) > 0) {
 }
 
 // Sem overlaps: inserir bloqueio (id_tratamento = 9999, title = 'Serviço não disponivel')
+// ajustar colunas existentes: [title,start_event,end_event,notas,id_tratamento,cabeleireira]
 $insertSql = "
-    INSERT INTO eventos (id_terapeuta, title, start_event, end_event, notas, id_tratamento, criado_por, data_criacao)
-    VALUES (?, ?, ?, ?, ?, ?, ?, GETDATE())
+    INSERT INTO events (title, start_event, end_event, notas, id_tratamento, cabeleireira)
+    VALUES (?, ?, ?, ?, ?, ?)
 ";
 $title = 'Serviço não disponivel';
 $id_trat = 9999;
-$criado_por = isset($_SESSION['user_id']) ? $_SESSION['user_id'] : null;
-$insertParams = [$cabeleireira, $title, $start_dt, $end_dt, $notas, $id_trat, $criado_por];
+$insertParams = [$title, $start_dt, $end_dt, $notas, $id_trat, $cabeleireira];
 
 $insStmt = sqlsrv_query($conn, $insertSql, $insertParams);
 if ($insStmt === false) {
