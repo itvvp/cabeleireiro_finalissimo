@@ -66,10 +66,14 @@
     <script src='packages/colorpicker/bootstrap-colorpicker.min.js'></script>
     <script src='calendar2.js'></script>
 
-    <script>
-        
-
-    </script>
+    <style>
+      /* Fallback vertical centering para versões sem modal-dialog-centered */
+      .modal.modal .modal-dialog.modal-dialog-centered{
+        display: flex;
+        align-items: center;
+        min-height: calc(100% - 1rem);
+      }
+    </style>
 </head>
 <!-- END: Head-->
 <!-- BEGIN: Body-->
@@ -83,6 +87,7 @@
 
     <!-- BEGIN: Main Menu-->
 <?php include "menu_cima.php"; ?>
+<?php include "components/modal_overlap.php"; ?>
     <!-- END: Main Menu-->
     <!-- BEGIN: Content-->
     <div class="app-content content">
@@ -335,7 +340,86 @@
     <script src="app-assets/js/scripts/pages/page-users.js"></script>
     <!-- END: Page JS-->
 
-</body>
-<!-- END: Body-->
+    <!-- Modal para mostrar as marcações ativas que causam conflito (será preenchida por JS) -->
+<div class="modal fade" id="overlapsModal" tabindex="-1" role="dialog" aria-labelledby="overlapsModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="overlapsModalLabel">Marcações ativas que colidem</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Fechar">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body" id="overlapsModalBody">
+        <!-- preenchido por JS -->
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-dismiss="modal">Fechar</button>
+      </div>
+    </div>
+  </div>
+</div>
 
+<script type="text/javascript">
+$(function(){
+  // Substitua '#createEvent' pelo id correto do formulário se for outro
+  $('#createEvent').on('submit', function(e){
+    e.preventDefault();
+    var $form = $(this);
+    var data = $form.serialize();
+
+    $.post('api/insert_ind.php', data, function(resp){
+      console.log('api/insert_ind response', resp);
+
+      if (!resp.success) {
+        // mostrar mensagem de erro principal
+        $('#erro_inserir').show();
+
+        // se API devolveu overlaps, mostrar modal com lista
+        if (resp.overlaps && Array.isArray(resp.overlaps) && resp.overlaps.length > 0) {
+          showOverlaps(resp.overlaps);
+        }
+      } else {
+        // sucesso: fechar modal/limpar form (ajuste conforme necessário)
+        $('#erro_inserir').hide();
+        $form[0].reset();
+        $('#addeventmodal').modal('hide');
+        // opcional: refrescar calendário se existir variável calendar
+        if (typeof calendar !== 'undefined' && typeof calendar.refetchEvents === 'function') {
+          calendar.refetchEvents();
+        } else {
+          location.reload(); // fallback
+        }
+      }
+    }, 'json').fail(function(xhr){
+      console.error('ajax error', xhr.responseText);
+    });
+  });
+
+  function showOverlaps(overlaps) {
+    if (!Array.isArray(overlaps) || overlaps.length === 0) return;
+    var html = '<div class="table-responsive"><table class="table table-sm table-striped"><thead><tr><th>Título</th><th>Cliente</th><th>Quarto</th><th>Início</th><th>Fim</th><th>Notas</th></tr></thead><tbody>';
+    overlaps.forEach(function(o){
+      html += '<tr><td>' + escapeHtml(o.title) + '</td>';
+      html += '<td>' + escapeHtml(o.nome_hospede || o.cliente || '') + '</td>';
+      html += '<td>' + escapeHtml(o.quarto || '') + '</td>';
+      html += '<td>' + escapeHtml(o.start_event || o.start) + '</td>';
+      html += '<td>' + escapeHtml(o.end_event || o.end) + '</td>';
+      html += '<td>' + escapeHtml(o.notas) + '</td></tr>';
+    });
+    html += '</tbody></table></div>';
+    $('#overlapsModalBody').html(html);
+    $('#overlapsModal').modal('show');
+  }
+
+  function escapeHtml(str) {
+    return String(str || '').replace(/[&<>"'\/]/g, function (s) {
+      return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;','/':'&#x2F;'}[s];
+    });
+  }
+});
+</script>
+<!-- carregar JS -->
+<script src="js/overlap.js"></script>
+</body>
 </html>

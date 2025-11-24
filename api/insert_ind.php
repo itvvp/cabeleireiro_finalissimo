@@ -29,29 +29,36 @@ include("../bd/conexao.php");
             $data_hora_i_c=$startdate_inserir." ".$starttime_inserir;
             $data_hora_f=$startdate_inserir." ".$endtime_inserir;
 
-            // Parameterized overlap check and pass params to sqlsrv_query
-            $sql = "SELECT COUNT(*) AS total
+            // Buscar eventos sobrepostos e devolver lista para o frontend mostrar
+            $sql = "SELECT id, title, CONVERT(varchar, start_event, 120) AS start_event, CONVERT(varchar, end_event, 120) AS end_event,
+                           notas, id_tratamento, nome_hospede, quarto
                     FROM events
                     WHERE NOT (end_event <= ? OR start_event >= ?)
-                      AND id_tratamento != 9999
                       AND cabeleireira = ?";
             $params = array($data_hora_i_c, $data_hora_f, $cabeleireira);
             $stmt = sqlsrv_query($conn, $sql, $params);
             if ($stmt === false) {
                 die(print_r(sqlsrv_errors(), true));
             }
-            $row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC);
-            $numero_registos=$row["total"];
-        
-            if ($numero_registos>0) {
-                $error['totalRegistos'] = 'O horário que definiu para o tratamento já se encontra ocupado';
-                $data['success'] = false;
-                $data['errors'] = $error;
-            } 
-            else{
-                
-                $sql="insert into events(title,start_event,end_event,color,text_color,id_tratamento,notas,cabeleireira) values('$title','$data_hora_i_c','$data_hora_f','$cor','#ffffff',9999,'$NotasHospede','$cabeleireira')";
-                $stmt = sqlsrv_query($conn, $sql);
+            $overlaps = array();
+            while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
+                $overlaps[] = $row;
+            }
+            $numero_registos = count($overlaps);
+ 
+             if ($numero_registos > 0) {
+                 $error['totalRegistos'] = 'O horário que definiu para o tratamento já se encontra ocupado';
+                 $data['success'] = false;
+                 $data['errors'] = $error;
+                // anexar lista de marcações activas que causam o conflito
+                $data['overlaps'] = $overlaps;
+             } 
+             else{
+                 
+                 // parâmetro para INSERT para evitar problemas se houver aspas e para segurança
+                $insertSql = "INSERT INTO events (title,start_event,end_event,color,text_color,id_tratamento,notas,cabeleireira) VALUES (?,?,?,?,?,?,?,?)";
+                $insertParams = array($title, $data_hora_i_c, $data_hora_f, $cor, '#ffffff', 9999, $NotasHospede, $cabeleireira);
+                $stmt = sqlsrv_query($conn, $insertSql, $insertParams);
                 if ($stmt === false) {
                     die(print_r(sqlsrv_errors(), true));
                 }
@@ -65,45 +72,68 @@ include("../bd/conexao.php");
         {
             $startdate_inserir=date('Y/m/d',strtotime($startdate_inserir));
             $enddate_inserir=date('Y/m/d',strtotime($enddate_inserir));
-            while($startdate_inserir<=$enddate_inserir)
-            {
-                $title = "Horário não disponível";
-                $data_hora_i_c=$startdate_inserir." ".$starttime_inserir;
-                $data_hora_f=$startdate_inserir." ".$endtime_inserir;
 
-                // Use same parameterized overlap check inside the loop
-                $sql = "SELECT COUNT(*) AS total
+            // Primeiro passo: verificar todos os dias do intervalo para possíveis sobreposições
+            $current = $startdate_inserir;
+            $all_overlaps = array();
+            while($current <= $enddate_inserir)
+            {
+                $data_hora_i_c = $current." ".$starttime_inserir;
+                $data_hora_f = $current." ".$endtime_inserir;
+
+                $sql = "SELECT id, title, CONVERT(varchar, start_event, 120) AS start_event, CONVERT(varchar, end_event, 120) AS end_event,
+                               notas, id_tratamento, nome_hospede, quarto
                         FROM events
                         WHERE NOT (end_event <= ? OR start_event >= ?)
                           AND id_tratamento != 9999
+                          AND title != ?
                           AND cabeleireira = ?";
-                $params = array($data_hora_i_c, $data_hora_f, $cabeleireira);
+                $params = array($data_hora_i_c, $data_hora_f, 'Serviço Indisponivel', $cabeleireira);
                 $stmt = sqlsrv_query($conn, $sql, $params);
                 if ($stmt === false) {
                     die(print_r(sqlsrv_errors(), true));
                 }
-                $row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC);
-                $numero_registos=$row["total"];
 
-                if ($numero_registos>0) {
-                    $error['totalRegistos'] = 'O horário que definiu para o tratamento já se encontra ocupado';
-                    $data['success'] = false;
-                    $data['errors'] = $error;
-                } 
-                else{
-                    
-                    $sql="insert into events(title,start_event,end_event,color,text_color,id_tratamento,notas,cabeleireira) values('$title','$data_hora_i_c','$data_hora_f','$cor','#ffffff',9999,'$NotasHospede','$cabeleireira')";
-                    $stmt = sqlsrv_query($conn, $sql);
+                $overlaps = array();
+                while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
+                    $overlaps[] = $row;
+                }
+
+                if (count($overlaps) > 0) {
+                    $all_overlaps = array_merge($all_overlaps, $overlaps);
+                    break; // já encontrou conflito, não continuar verificando
+                }
+
+                $current = date('Y/m/d', strtotime("+1 days", strtotime($current)));
+            }
+
+            if (count($all_overlaps) > 0) {
+                $error['totalRegistos'] = 'Existem eventos marcados no intervalo fornecido';
+                $data['success'] = false;
+                $data['errors'] = $error;
+                $data['overlaps'] = $all_overlaps; // lista para o modal
+            } else {
+                // Sem sobreposições: inserir cada dia do intervalo
+                $current = $startdate_inserir;
+                while($current <= $enddate_inserir)
+                {
+                    $title = "Horário não disponível";
+                    $data_hora_i_c = $current." ".$starttime_inserir;
+                    $data_hora_f = $current." ".$endtime_inserir;
+
+                    $insertSql = "INSERT INTO events (title,start_event,end_event,color,text_color,id_tratamento,notas,cabeleireira) VALUES (?,?,?,?,?,?,?,?)";
+                    $insertParams = array($title, $data_hora_i_c, $data_hora_f, $cor, '#ffffff', 9999, $NotasHospede, $cabeleireira);
+                    $stmt = sqlsrv_query($conn, $insertSql, $insertParams);
                     if ($stmt === false) {
                         die(print_r(sqlsrv_errors(), true));
                     }
 
-                    $data['success'] = true;
-                    $data['message'] = 'Success!';
-                    
-                }  
-                $startdate_inserir=date('Y/m/d', strtotime("+1 days",strtotime($startdate_inserir))); 
-            }  
+                    $current = date('Y/m/d', strtotime("+1 days", strtotime($current)));
+                }
+
+                $data['success'] = true;
+                $data['message'] = 'Success!';
+            }
         }  
       
 
