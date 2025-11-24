@@ -1,7 +1,14 @@
 $(function(){
-  $('#createEvent').on('submit', function(e){
+  var isSubmitting = false;
+  var $form = $('#createEvent');
+
+  // remove quaisquer handlers antigos e liga só este
+  $form.off('submit').on('submit', function(e){
     e.preventDefault();
-    var $form = $(this);
+    e.stopImmediatePropagation();
+    if (isSubmitting) return false;
+    isSubmitting = true;
+
     var data = $form.serialize();
 
     $.post('api/insert_ind.php', data, function(resp){
@@ -9,7 +16,6 @@ $(function(){
 
       if (!resp.success) {
         $('#erro_inserir').show();
-
         if (resp.overlaps && Array.isArray(resp.overlaps) && resp.overlaps.length > 0) {
           showOverlaps(resp.overlaps);
         }
@@ -25,7 +31,7 @@ $(function(){
       }
     }, 'json').fail(function(xhr){
       console.error('ajax error', xhr.responseText);
-    });
+    }).always(function(){ isSubmitting = false; });
   });
 
   function showOverlaps(overlaps) {
