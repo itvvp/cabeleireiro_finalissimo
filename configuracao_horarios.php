@@ -93,6 +93,9 @@ error_reporting(E_ALL & ~E_NOTICE);
                   <li class="nav-item">
                     <a class="nav-link" id="horario-tab" data-toggle="tab" href="#horario" role="tab">Horário de Funcionamento</a>
                   </li>
+                  <li class="nav-item">
+                    <a class="nav-link" id="ferias-tab" data-toggle="tab" href="#ferias" role="tab">Férias</a>
+                  </li>
                 </ul>
 
                 <div class="tab-content mt-2">
@@ -217,6 +220,50 @@ error_reporting(E_ALL & ~E_NOTICE);
                     <div id="bhFeedback" class="mt-2"></div>
 
                   
+                  </div>
+
+                  <!-- FÉRIAS -->
+                  <div class="tab-pane fade" id="ferias" role="tabpanel">
+                    <form id="createFerias" class="form">
+                      <div class="row">
+                        <div class="col-md-6">
+                          <div class="form-group">
+                            <label for="ferias_cabeleireira">Cabeleireira</label>
+                            <select id="ferias_cabeleireira" name="cabeleireira_id" class="form-control" required>
+                              <option value="">Selecione a cabeleireira</option>
+                              <?php
+                                $sql="select * from terapeutas order by nome";
+                                $stmt = sqlsrv_query($conn, $sql);
+                                while ($r = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
+                                    echo '<option value="'.$r['id'].'">'.$r['nome'].'</option>';
+                                }
+                              ?>
+                            </select>
+                          </div>
+                        </div>
+
+                        <div class="col-md-3">
+                          <div class="form-group">
+                            <label for="start_ferias">Data Início</label>
+                            <input type="date" id="start_ferias" name="start_ferias" class="form-control" required>
+                          </div>
+                        </div>
+
+                        <div class="col-md-3">
+                          <div class="form-group">
+                            <label for="end_ferias">Data Fim</label>
+                            <input type="date" id="end_ferias" name="end_ferias" class="form-control" required>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div class="text-right">
+                        <button type="submit" class="btn btn-primary" id="gravar_ferias">Gravar Férias</button>
+                      </div>
+                    </form>
+
+                    <div id="feriasTableContainer" class="mt-3"></div>
+                    <div id="feriasFeedback" class="mt-2"></div>
                   </div>
                 </div>
 
@@ -467,6 +514,65 @@ error_reporting(E_ALL & ~E_NOTICE);
 
         // carregar ao abrir a página
         loadFolgas(); loadHorarios();
+
+
+         function loadFerias(){
+    $.getJSON('api/get_ferias.php').done(function(resp){
+      if (!resp.success) {
+        $('#feriasTableContainer').html('<div class="alert alert-danger">Erro ao obter férias.</div>');
+        return;
+      }
+      var html = '<table class="table table-sm"><thead><tr><th>Cabeleireira</th><th>Início</th><th>Fim</th><th>Adicionado</th></tr></thead><tbody>';
+      resp.data.forEach(function(r){
+        var nome = r.terapeuta_nome || r.nome || r.cabeleireira_nome || r.cabeleireira_id || r.terapeuta_id;
+        html += '<tr><td>'+ nome +'</td><td>'+ (r.start_ferias||'') +'</td><td>'+ (r.end_ferias||'') +'</td><td>'+ (r.created_at||'') +'</td></tr>';
+      });
+      html += '</tbody></table>';
+      $('#feriasTableContainer').html(html);
+    }).fail(function(){
+      $('#feriasTableContainer').html('<div class="alert alert-danger">Erro de comunicação.</div>');
+    });
+  }
+
+  $('#createFerias').on('submit', function(e){
+    e.preventDefault();
+
+    // client-side validation
+    var start = $('#start_ferias').val();
+    var end   = $('#end_ferias').val();
+    if (!start || !end) {
+      $('#feriasFeedback').html('<div class="alert alert-danger">Selecione as datas de início e fim.</div>');
+      return;
+    }
+    var s = new Date(start); s.setHours(0,0,0,0);
+    var eDate = new Date(end); eDate.setHours(0,0,0,0);
+    if (eDate < s) {
+      $('#feriasFeedback').html('<div class="alert alert-danger">A data de fim deve ser igual ou posterior à data de início</div>');
+      return;
+    }
+
+    var $btn = $(this).find('button[type="submit"]').prop('disabled', true);
+    $.ajax({
+      url: 'api/insert_ferias.php',
+      method: 'POST',
+      data: $(this).serialize(),
+      dataType: 'json'
+    }).done(function(resp){
+      if (resp.success) {
+        $('#feriasFeedback').html('<div class="alert alert-success">'+ (resp.message || 'Férias gravadas') +'</div>');
+        $('#createFerias')[0].reset();
+        loadFerias();
+      } else {
+        $('#feriasFeedback').html('<div class="alert alert-danger">Erro: ' + (resp.error || JSON.stringify(resp.errors)) + '</div>');
+      }
+    }).fail(function(xhr, status){
+      $('#feriasFeedback').html('<div class="alert alert-danger">Erro de comunicação: '+status+'</div>');
+      console.error(xhr.responseText);
+    }).always(function(){ $btn.prop('disabled', false); });
+  });
+
+  // carregar inicialmente
+  loadFerias();
       });
     </script>
 
