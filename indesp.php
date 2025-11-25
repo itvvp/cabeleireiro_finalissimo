@@ -136,7 +136,7 @@
                                                         <div id="title-group" class="form-group">
                                                             <label class="control-label" for="title">Selecione a cabeleireira</label>
                                                             <select class="form-control" id="cabeleireira" name="cabeleireira" required autocomplete="off">
-                                                                <option value="null">Selecione a cabeleireira</option>
+                                                                <option value="" disable selected>Selecione a cabeleireira</option>
                                                                 <?php
                                                                     $sql4="select * from terapeutas order by nome";
                                                                     $stmt4 = sqlsrv_query($conn, $sql4);
