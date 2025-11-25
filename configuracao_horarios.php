@@ -338,7 +338,7 @@ error_reporting(E_ALL & ~E_NOTICE);
         }
         
         // Delegated handler para apagar folga
-        $(document).on('click', '.btn-delete-folga', function(){
+        $(document).on('click', '#btn-delete-folga', function(){
           var id = $(this).data('id');
           if (!confirm('Tem a certeza que pretende apagar esta folga?')) return;
           var $btn = $(this).prop('disabled', true);
@@ -350,6 +350,9 @@ error_reporting(E_ALL & ~E_NOTICE);
           }).done(function(resp){
             if (resp.success) {
               $('#folgaFeedback').html('<div class="alert alert-success">Folga apagada com sucesso.</div>');
+              setTimeout(function(){
+                $('#folgaFeedback .alert').fadeOut();
+              }, 3000);
               if (typeof calendar !== 'undefined' && calendar.refetchEvents) calendar.refetchEvents();
               loadFolgas();
             } else {
@@ -522,10 +525,18 @@ error_reporting(E_ALL & ~E_NOTICE);
         $('#feriasTableContainer').html('<div class="alert alert-danger">Erro ao obter férias.</div>');
         return;
       }
-      var html = '<table class="table table-sm"><thead><tr><th>Cabeleireira</th><th>Início</th><th>Fim</th><th>Adicionado</th></tr></thead><tbody>';
+      var html = '<table class="table table-sm"><thead><tr><th>Cabeleireira</th><th>Início</th><th>Fim</th><th>Adicionado</th><th>Ações</th></tr></thead><tbody>';
       resp.data.forEach(function(r){
-        var nome = r.terapeuta_nome || r.nome || r.cabeleireira_nome || r.cabeleireira_id || r.terapeuta_id;
-        html += '<tr><td>'+ nome +'</td><td>'+ (r.start_ferias||'') +'</td><td>'+ (r.end_ferias||'') +'</td><td>'+ (r.created_at||'') +'</td></tr>';
+        var nome = r.terapeuta_nome || r.nome || r.cabeleireira_nome || r.cabeleireira_id || r.terapeuta_id || '';
+        var fid = r.id || r.ferias_id || r.feriasId || 0;
+        html += '<tr data-id="'+ fid +'"><td>'+ escapeHtml(nome) +'</td><td>'+ (r.start_ferias||'') +'</td><td>'+ (r.end_ferias||'') +'</td><td>'+ (r.created_at||'') +'</td>';
+        html += '<td>';
+        if (fid) {
+          html += '<button class="btn btn-sm btn-danger btn-delete-ferias" data-id="'+ fid +'" id="delete-ferias">Apagar</button>';
+        } else {
+          html += '<span class="text-muted small">Sem id</span>';
+        }
+        html += '</td></tr>';
       });
       html += '</tbody></table>';
       $('#feriasTableContainer').html(html);
@@ -566,11 +577,40 @@ error_reporting(E_ALL & ~E_NOTICE);
         $('#feriasFeedback').html('<div class="alert alert-danger">Erro: ' + (resp.error || JSON.stringify(resp.errors)) + '</div>');
       }
     }).fail(function(xhr, status){
-      $('#feriasFeedback').html('<div class="alert alert-danger">Erro de comunicação: '+status+'</div>');
+      $('#feriasFeedback').html('<div class="alert alert-danger">Erro de comunicação: '+ status +'</div>');
       console.error(xhr.responseText);
     }).always(function(){ $btn.prop('disabled', false); });
   });
 
+
+
+  // Delegated handler para apagar férias (envia id para api/delete_ferias.php)
+  $(document).on('click', '.btn-delete-ferias', function(){
+    var id = $(this).data('id');
+    if (!id) return;
+    if (!confirm('Tem a certeza que pretende apagar estas férias?')) return;
+    var $btn = $(this).prop('disabled', true);
+    $.ajax({
+      url: 'api/delete_ferias.php',
+      method: 'POST',
+      data: { id: id },
+      dataType: 'json'
+    }).done(function(resp){
+      if (resp && resp.success) {
+        $('#feriasFeedback').html('<div class="alert alert-success">Férias apagadas com sucesso.</div>');
+        setTimeout(function(){ $('#feriasFeedback .alert').fadeOut(); }, 3000);
+        if (typeof calendar !== 'undefined' && calendar.refetchEvents) calendar.refetchEvents();
+        loadFerias();
+      } else {
+        $('#feriasFeedback').html('<div class="alert alert-danger">Erro: ' + (resp && (resp.error || JSON.stringify(resp.errors)) || 'Resposta inválida') + '</div>');
+      }
+    }).fail(function(xhr, status){
+      $('#feriasFeedback').html('<div class="alert alert-danger">Erro de comunicação ao apagar: '+ status +'</div>');
+      console.error(xhr && xhr.responseText);
+    }).always(function(){ $btn.prop('disabled', false); });
+  });
+
+  
   // carregar inicialmente
   loadFerias();
       });
