@@ -18,6 +18,7 @@ foreach($result as $row) {
 */
 
 $sql="SELECT * FROM events where cabeleireira='1' ORDER BY id";
+$sqlFerias="SELECT * FROM ferias where cabeleireira_id='1' ORDER BY id";
 $stmt = sqlsrv_query($conn, $sql);
 if ($stmt === false) {
     die(print_r(sqlsrv_errors(), true));
@@ -43,5 +44,39 @@ while($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC))
     ];
     $a++;
 }
+
+// <-- ADICIONADO: carregar também as férias
+$stmtF = sqlsrv_query($conn, $sqlFerias);
+if ($stmtF === false) {
+    die(print_r(sqlsrv_errors(), true));
+}
+while ($f = sqlsrv_fetch_array($stmtF, SQLSRV_FETCH_ASSOC)) {
+    $startRaw = $f['start_ferias'];
+    $endRaw   = $f['end_ferias'];
+
+    // normaliza para strings YYYY-MM-DD HH:MM:SS
+    if (is_object($startRaw) && method_exists($startRaw, 'format')) {
+        $start = $startRaw->format('Y-m-d') . ' 00:00:00';
+    } else {
+        $start = substr((string)$startRaw, 0, 10) . ' 00:00:00';
+    }
+    if (is_object($endRaw) && method_exists($endRaw, 'format')) {
+        $end = $endRaw->format('Y-m-d') . ' 23:59:59';
+    } else {
+        $end = substr((string)$endRaw, 0, 10) . ' 23:59:59';
+    }
+
+    $title = isset($f['nome']) ? 'Férias - ' . $f['nome'] : 'Férias';
+
+    $data[] = [
+        'id' => 'ferias-' . $f['id'],
+        'title' => $title,
+        'start' => $start,
+        'end' => $end,
+        'backgroundColor' => '#00ccff',
+        'textColor' => '#ffffff'
+    ];
+}
+
 echo json_encode($data);
 ?>

@@ -9,7 +9,6 @@ if (!file_exists(__DIR__ . '/../bd/conexao.php')) {
 }
 include __DIR__ . '/../bd/conexao.php';
 
-// método POST obrigatório
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
   http_response_code(405);
   echo json_encode(['success' => false, 'error' => 'Método não permitido']);
@@ -23,7 +22,6 @@ if ($id <= 0) {
   exit;
 }
 
-// Removido: verificar sessão / permissões (opcional)
 
 if (!isset($conn) || !$conn) {
   http_response_code(500);
