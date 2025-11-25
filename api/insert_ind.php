@@ -88,6 +88,7 @@ if ($insStmt === false) {
     exit;
 }
 
-echo json_encode(['success' => true]);
+// <<< changed code: return case === 0 so js/overlap.js shows success modal
+echo json_encode(['success' => true, 'case' => 0]);
 exit;
 ?>

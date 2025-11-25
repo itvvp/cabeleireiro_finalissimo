@@ -87,6 +87,7 @@
 
     <!-- BEGIN: Main Menu-->
 <?php include "menu_cima.php"; ?>
+<?php include __DIR__ . '/components/modal_success.php'; ?>
 <?php include "components/modal_overlap.php"; ?>
     <!-- END: Main Menu-->
     <!-- BEGIN: Content-->

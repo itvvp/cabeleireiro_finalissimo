@@ -11,27 +11,59 @@ $(function(){
 
     var data = $form.serialize();
 
-    $.post('api/insert_ind.php', data, function(resp){
-      console.log('api/insert_ind response', resp);
+$.post('api/insert_ind.php', data, function(resp){
+  console.log('api/insert_ind response', resp);
 
-      if (!resp.success) {
-        $('#overlapsModal').show();
-        if (resp.overlaps && Array.isArray(resp.overlaps) && resp.overlaps.length > 0) {
-          showOverlaps(resp.overlaps);
-        }
+  // mostrar successModal quando resp.case === 0
+  if (resp && resp.case === 0) {
+    var $success = $('#successModal');
+    if ($success.length === 0) {
+      var successHtml = '<div class="modal fade" id="successModal" tabindex="-1" role="dialog" aria-labelledby="successModalLabel" aria-hidden="true">' +
+                        '<div class="modal-dialog modal-dialog-centered" role="document">' +
+                          '<div class="modal-content">' +
+                            '<div class="modal-header"><h5 class="modal-title" id="successModalLabel">Sucesso</h5>' +
+                            '<button type="button" class="close" data-dismiss="modal" aria-label="Fechar"><span aria-hidden="true">&times;</span></button></div>' +
+                            '<div class="modal-body">Operação concluída com sucesso.</div>' +
+                            '<div class="modal-footer"><button type="button" class="btn btn-secondary" data-dismiss="modal">Fechar</button></div>' +
+                          '</div>' +
+                        '</div>' +
+                       '</div>';
+      $('body').append(successHtml);
+      $success = $('#successModal');
+    }
+    try {
+      if (typeof $success.modal === 'function') {
+        $success.appendTo('body');
+        $success.modal('show');
       } else {
-        $('#overlapsModal').hide();
-        $form[0].reset();
-        $('#addeventmodal').modal('hide');
-        if (typeof calendar !== 'undefined' && typeof calendar.refetchEvents === 'function') {
-          calendar.refetchEvents();
-        } else {
-          location.reload();
-        }
+        $success.show();
+        alert('Operação concluída com sucesso.');
       }
-    }, 'json').fail(function(xhr){
-      console.error('ajax error', xhr.responseText);
-    }).always(function(){ isSubmitting = false; });
+    } catch (err) {
+      console.error('Erro ao mostrar successModal:', err);
+      alert('Operação concluída com sucesso.');
+    }
+    return;
+  }
+
+  if (!resp.success) {
+    $('#overlapsModal').show();
+    if (resp.overlaps && Array.isArray(resp.overlaps) && resp.overlaps.length > 0) {
+      showOverlaps(resp.overlaps);
+    }
+  } else {
+    $('#overlapsModal').hide();
+    $form[0].reset();
+    $('#addeventmodal').modal('hide');
+    if (typeof calendar !== 'undefined' && typeof calendar.refetchEvents === 'function') {
+      calendar.refetchEvents();
+    } else {
+      location.reload();
+    }
+  }
+}, 'json').fail(function(xhr){
+  console.error('ajax error', xhr.responseText);
+}).always(function(){ isSubmitting = false; });
   });
 
   function showOverlaps(overlaps) {
