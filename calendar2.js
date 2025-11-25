@@ -37,8 +37,8 @@ today = yyyy + '-' + mm + '-' + dd;
         defaultView: 'listMonth',
         initialView: 'listMonth',
         locale: 'pt',
-        navLinks: true, // can click day/week names to navigate views
-        businessHours: true, // display business hours
+        navLinks: true,
+        businessHours: true,
         editable: true,
        defaultDate: today,
         events: url+'api/load_ind.php',
